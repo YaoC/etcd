@@ -19,6 +19,7 @@ import (
 	"hash/crc32"
 	"io"
 	"io/ioutil"
+	"math/rand"
 	"os"
 	"path/filepath"
 	"sync"
@@ -542,6 +543,15 @@ func (b *backend) defrag() error {
 	db := b.readTx.tx.DB()
 	atomic.StoreInt64(&b.size, size)
 	atomic.StoreInt64(&b.sizeInUse, size-(int64(db.Stats().FreePageN)*int64(db.Info().PageSize)))
+
+	// Increase defrag time to test client load balancer
+	duration := rand.Intn(15)
+	if b.lg != nil {
+		b.lg.Info("Increase defrag time by sleeping", zap.Int("seconds", duration))
+	} else {
+		plog.Infof("Increase defrag time by sleeping %d seconds", duration)
+	}
+	time.Sleep(time.Second * time.Duration(duration))
 
 	took := time.Since(now)
 	defragSec.Observe(took.Seconds())
