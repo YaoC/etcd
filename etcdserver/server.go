@@ -2344,6 +2344,17 @@ func (s *EtcdServer) applyConfChange(cc raftpb.ConfChange, confState *raftpb.Con
 			}
 		}
 
+		if lg != nil {
+			lg.Info(
+				"conf change (add member/learner)",
+				zap.String("local-member-id", s.id.String()),
+				zap.String("added-member-id", confChangeContext.Member.ID.String()),
+				zap.Bool("added-member-is-learner", confChangeContext.IsLearner),
+				zap.Bool("added-member-is-promote", confChangeContext.IsPromote),
+				zap.String("conf-change-type", cc.Type.String()),
+			)
+		}
+
 		// update the isLearner metric when this server id is equal to the id in raft member confChange
 		if confChangeContext.Member.ID == s.id {
 			if cc.Type == raftpb.ConfChangeAddLearnerNode {
