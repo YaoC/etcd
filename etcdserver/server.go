@@ -542,6 +542,7 @@ func NewServer(cfg ServerConfig) (srv *EtcdServer, err error) {
 		AccessController:   &AccessController{CORS: cfg.CORS, HostWhitelist: cfg.HostWhitelist},
 		firstCommitInTermC: make(chan struct{}),
 	}
+	srv.updateLearnerMetric()
 	serverID.With(prometheus.Labels{"server_id": id.String()}).Set(1)
 
 	srv.applyV2 = &applierV2store{store: srv.v2store, cluster: srv.cluster}
@@ -1350,6 +1351,8 @@ func (s *EtcdServer) applySnapshot(ep *etcdProgress, apply *apply) {
 	}
 
 	s.cluster.Recover(api.UpdateCapability)
+
+	s.updateLearnerMetric()
 
 	if lg != nil {
 		lg.Info("restored cluster configuration")
@@ -2733,4 +2736,17 @@ func (s *EtcdServer) IsMemberExist(id types.ID) bool {
 // raftStatus returns the raft status of this etcd node.
 func (s *EtcdServer) raftStatus() raft.Status {
 	return s.r.Node.Status()
+}
+
+func (s *EtcdServer) updateLearnerMetric() {
+	for _, m := range s.cluster.Members() {
+		if m.ID == s.id {
+			if m.IsLearner {
+				isLearner.Set(1)
+			} else {
+				isLearner.Set(0)
+			}
+			break
+		}
+	}
 }
